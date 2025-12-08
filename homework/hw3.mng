@@ -18,6 +18,7 @@
 \usepackage{textcomp}
 \usepackage{xspace}
 \usepackage{ottalt}
+\usepackage{prftree}
 \usepackage[T1]{fontenc}
 
 \usepackage{../notes/notes}
@@ -27,7 +28,7 @@
 \interfootnotelinepenalty=10000
 
 \title{CIS 7000-1 Homework 3}
-\author{NAME: FILL IN HERE}
+\author{NAME: One An}
 
 \inputott{all-rules}
 
@@ -70,17 +71,44 @@ checks and evaluates.)
 \item What small step rule(s) do we need to add to \rec\ so that the progress
   lemma holds?
 
+  We would need to add a rule that unfolds the recursive values for cases. 
+
+\begin{displaymath}
+\prftree[r]{}{}{[[ case (rec x.v) of {0 => e0; S y => e1} ~> case (v[rec x.v/x] ) of {0 => e0; S y => e1}]] }
+\end{displaymath}
+
+Call the above rule \rref{S-case-rec}.
+
 \item How do the following expressions evaluate using the small step semantics?
   Write the sequence of steps that they take, stopping when you get to a 
   value or loop back to a prior term. Use your new step 
   rule(s) from the previous part.
 
 \begin{itemize}
-\item $[[(\x.x) omega]] [[~>]]$
-\item $[[case omega of { 0 => 0 ; S y => y }  ]] [[~>]]$ 
-\item $[[(rec x . \y. case y of { 0 => 0 ; S y => S y }) omega]] [[~>]]$
-\item $[[(rec x . \y. case y of { 0 => 0 ; S y => x y }) omega]] [[~>]]$
+\item $[[(\x.x) omega]] [[~>]] [[omega]]$
+
+\item \begin{align*}
+[[case omega of { 0 => 0 ; S y => y }  ]]  & [[~>]]  [[case (S omega) of { 0 => 0 ; S y => y}]] \\
+ & [[~>]] [[omega]]
+\end{align*}
+\item
+\begin{align*}
+ [[(rec x . \y. case y of { 0 => 0 ; S y => S y }) omega]] & [[~>]] [[(\y.case y  of {0 => 0; S y => S y}) omega]]\\
+ & [[~>]] [[case omega of {0 => 0 ; S y => S y}]] \\
+ & [[~>]]  [[case (S omega) of {0 => 0 ; S y => S y} ]] \\
+ & [[~>]] [[omega]]
+\end{align*}
+
+\item \hspace{0.2cm}
+
 \end{itemize}
+\begin{align*}
+[[(rec x . \y. case y of { 0 => 0 ; S y => x y }) omega]] & [[~>]] 
+[[(\y. case y of {0 => 0; S y => (rec x. \y. case y of {0 => 0; S y => x y}) y}) omega]] \\
+& [[~> ]] [[case omega of {0 => 0; S y => (rec x. \y. case y of {0 => 0; S y => x y}) y}]] \\
+& [[~>]] [[case (S omega) of {0 => 0; S y => (rec x. \y. case y of {0 => 0; S y => x y}) y}]] \\
+& [[~>]][[(rec x . \y. case y of { 0 => 0 ; S y => x y }) omega]]
+\end{align*}
 
 \end{enumerate} 
 
@@ -104,8 +132,23 @@ Define $[[succ e]]$ as $[[let x = e in ret (S x)]]$.
 Now, prove that this definition acts like a successor term, by showing these properties of the encoding.
 \begin{enumerate}
 \item If $[[G ||- e : Nat]]$ then $[[G ||- succ e : Nat]]$.
+
+By \rref{tv-var}, we know that $[[G, x : Nat |- x : Nat ]]$. 
+By \rref{tv-succ}, we have that $[[G, x: Nat |- S x : Nat ]]$.
+By \rref{te-ret}, we have that $[[G, x: Nat |- ret (S x) : Nat]]$ (1).
+By assumption, we know that $[[G ||- e : Nat]]$ (2). By using \rref{te-let}
+on (1) and (2), we get that $[[G |- let x = e in ret (S x) : Nat]]$. This is equivalent 
+by definition to $[[G |- succ e : Nat ]]$
 \item $[[ succ (ret v) ~> ret (S v) ]]$.
+
+By definition, we know that $[[succ (ret v)]] = [[let x = ret v in ret (S x)]]$. 
+So by \rref{s-let-rec}, we have that $[[let x = ret v in ret (S x) ~> (ret S (x)) [v/x] ]]$.
+Since $[[(ret S (x)) [v/x] ]] = [[ret S v]]$, we're done.
+
 \item If $[[ e ~> e' ]]$ then $[[ succ e ~>* succ e' ]]$.
+By definition, we know that $[[succ (e)]] = [[let x = e in ret (S x)]]$.
+Use \rref{s-let-cong} to get $[[let x = e1 in ret (S x) ~> let x = e1' in ret (S x) ]]$.
+By definition, this is what we wanted to show, so we're done.
 \end{enumerate}
 
 \subsection{Derived products}
@@ -127,12 +170,61 @@ Define $[[ (e1 , e2) ]]$ as $[[let x1 <= e1 in let x2 <= e2 in ret (x1, x2)]]$.
 Now, prove that this definition acts like a product term, by showing these properties of the encoding.
 \begin{enumerate}
 \item If $[[ G |- e1 : tau1 ]]$ and $[[ G |- e2 : tau2 ]]$ then $[[ G |- (e1,e2) : tau1 * tau2 ]]$.
+
+\begin{proof}
+By \rref{tv-var}, we know that $[[G, x1 : tau1, x2 : tau2 |- x1 : tau1 ]]$ and 
+$[[G, x1 : tau1, x2 : tau2 |- x2 : tau2 ]]$. By \rref{tv-pair}, we have
+$[[G, x1 : tau1, x2 : tau2 |- (x1, x2) : tau1 * tau2]]$. By \rref{tv-ret}, we have
+$[[G, x1 : tau1, x2 : tau2 |- ret (x1, x2) : tau1 * tau2]]$ (1). By weakening on hypothesis, we 
+get $[[G, x1: tau1 |- e2 : tau2]]$. Combining this and (1), we can use \rref{te-let} to get
+$[[G, x1 : tau1 |- let x2 = e2 in ret (x1, x2) : tau1 * tau2]]$. Now by \rref{te-let} on
+the first assumption, we get $[[G |- let x1 = e1 in let x2 = e2 in ret(x1, x2) : tau1 * tau2]]$. 
+By definition, we have $[[G |- let x1 <= e1 in let x2 <= e2 in ret(x1, x2) : tau1 * tau2]]$. This
+is by definition equivalent to $[[G |- (e1, e2) : tau1 * tau2]]$.
+\end{proof}
+
 \item If $[[ e1 ~> e1' ]]$ then $[[ (e1,e2) ~>* (e1', e2) ]]$.
+
+\begin{proof}
+We want to show that $[[let x1 <= e1 in let x2 <= e2 in ret(x1, x2) ~>* let x1 <= e1' in let x2 <= e2 in ret(x1, x2)]]$.
+We case on the definition of the eager let. If $[[e1 ]] = [[ret v]]$, we have that this case cannot happen since
+$[[e1]]$ must single step. 
+
+%we have that $[[(e1, e2)]]
+%= [[ let x2 <= e2 in ret(v, x2)]]$. Since $[[e1 ]] = [[ret v]]$ and $[[ret v]]$ cannot step, we also have that $[[e1']] = [[ret v]]$.
+%So by definition, we also have $[[(e1', e2)]] = [[let x2 <= e2 in ret(v,x2)]]$. So, we have that $[[(e1, e2) ~>* (e1',e2)]]$ by
+%reflexivity.
+
+
+If $[[e1]] \neq [[ret v]]$, then, we have that $[[(e1,e2)]] = [[let x1 = e1 in let x2 <= e2 in ret(x1, x2)]]$. So by
+\rref{s-let-cong}, we have that $[[let x1 = e1 in let x2 <= e2 in ret(x1, x2) ~> let x1 = e1' in let x2 <= e2 in ret(x1,x2) ]]$.
+This is equivalent to $[[(e1, e2) ~> (e1',e2)]]$. So, we have that $[[(e1, e2) ~>* (e1', e2)]]$.
+\end{proof}
+
+
 \item If $[[ e2 ~> e2' ]]$ then $[[ (ret v1,e2) ~>* (ret v1, e2') ]]$.
+\begin{proof}
+We want to show that $[[let x1 <= ret v1 in let x2 <= e2 in ret(x1, x2) ~>* let x1 <= ret v1 in let x2 <= e2' in ret(x1, x2)]]$. 
+By definition of eager let on the outside, this is equivalent to $[[let x2 <= e2 in ret(v1, x2) ~>* let x2 <= e2' in ret(v1, x2) ]]$.
+We case on the definition of eager let. Similar to the first congruence, we cannot have that $[[e2]] = [[ret v2]]$. 
+
+% we have that $[[(ret v1, e2)]]  = [[ret(v1, v2)]]$. Similar to the previous part,
+%we also must have that $[[e2']] = [[ret v2]]$. So, we also have $[[(ret v1, e2')]] = [[ret(v1, v2)]]$. By reflexivity, we have that
+%$[[(ret v1, e2) ~>* (ret v1, e2')]]$.
+
+If $[[e2]] \neq [[ret v2]]$, we have that $[[(ret v1, e2)]] = [[let x2 = e2 in ret(v1, x2)]]$. By \rref{s-let-cong}, we get that
+$[[let x2 = e2 in ret(v1, x2) ~> let x2 = e2' in ret(v1, x2)]]$. So, we have that $[[(ret v1, e2) ~> (ret v1, e2')]]$. Thus, we also have that
+$[[(ret v1, e2) ~>* (ret v1, e2')]]$. 
+\end{proof}
 \end{enumerate}
 
 What if we used regular let in the definition of $[[(e1,e2)]]$. Are the two properties still true 
 for this encoding? If any fail, provide a counterexample.
+
+We claim that the congruence in the second position of the product fails. Consider the case when $[[e2]] := [[let y = ret 0 in ret y]]$. 
+So, we have that $[[e2 ~> e2']]$ where $[[e2']] = [[ret 0]]$. Using the regular let in the definition, we have that 
+$[[(ret v1, e2)]] = [[let x1 = ret v1 in let x2 = e2 in ret(x1, x2)]]$. Since this must reduce to $[[let x2 = e2 in ret(v1, x2)]]$,
+it does not reduce to $[[(ret v1, e2')]] = [[let x1 = ret v1 in let x2 = ret 0 in ret(x1, x2)]]$. Thus, this property fails.
 
 \newpage
 
@@ -178,9 +270,29 @@ If $[[G |= v1 : tau1 ]]$ and $[[ G |=  v2 : tau2 ]]$  then
    $[[G |= (v1, v1) : tau1 * tau2]]$.
 \end{lemma}
 
+\begin{proof}
+Let $[[sigma elem [G] ]]$ be arbitrary and assume $[[v1[sigma] elem V tau1]]$
+and $[[v2[sigma] elem V tau2 ]]$. By \rref{s-prj1}, we know that
+$[[ prj1 (v1 [sigma], v2 [sigma ]) ~> ret v1[sigma] ]]$, so we have that $[[prj1 (v1 [sigma], v2[sigma]) ~>* ret v1 [sigma] ]]$
+by extending it to a multi-step reduction. Since we know $[[v1[sigma] elem V tau1]]$,
+we know that $[[prj1 (v1[sigma], v2[sigma]) elem C tau1]]$. Since 
+$[[(v1 [sigma] , v2[sigma]) ]] = [[(v1,v2)[sigma] ]]$, we have that $[[prj1 (v1,v2)[sigma] elem C tau1 ]]$.
+ Symmetrically, we have that 
+$[[prj2 (v1, v2) [sigma] elem C tau2]]$. So by definition, $[[(v1,v2)[sigma] elem V tau1*tau2 ]]$,
+which is what we wanted to show.
+\end{proof}
+
 \begin{lemma}[\link{homework/rocq/hw3/semsound.v}{}{semantic projection}]
 If $[[G |= v1 : tau1 * tau2 ]]$ then $[[G |= prj1 v1 : tau1 ]]$.
 \end{lemma}
+
+\begin{proof}
+Let $[[sigma elem [G] ]]$ be arbitrary and assume $[[v1[sigma] elem V tau1 * tau2 ]]$.
+Then, by definition, we have that $[[prj1 (v1[sigma]) elem C tau1 ]]$. But,
+$[[prj1 (v1[sigma])]] = [[(prj1 v1) [sigma] ]]$. So we have $ [[(prj1 v1) [sigma] elem C tau1]]$,
+which is what we waneted to show.
+
+\end{proof}
 
 \newpage
 
@@ -219,19 +331,65 @@ and its notion of semantic typing:
 
 Finish the step-indexed logical relations proof for products (including
 recursive products).
-
 \begin{lemma}[\link{homework/rocq/hw3/steps.v}{}{ST\_prod}]
 If $[[G |= k v1 : tau1 ]]$ and $[[ G |= k v2 : tau2 ]]$  then
    $[[G |=k (v1, v1) : tau1 * tau2]]$.
 \end{lemma}
 
+\begin{proof}
+Let $j < k$ and $[[ G sigma j]]$. We want to show that $[[ V tau1 * tau2 (v1,v2)[sigma] j ]]$.
+Since $[[(v1, v2) [sigma] ]] = [[(v1[sigma],v2[sigma])]]$, this is equivalent to showing
+$[[|> j V tau1 v1[sigma] ]]$ and $[[ |> j V tau2 v2[sigma] ]]$ by definition. If $j=0$, then
+it trivially holds. If $j = S i$, we want to show that $[[V tau1 v1[sigma] i ]]$ and
+$[[V tau2 v2[sigma] i]]$. By unfolding the definition on our assumption, we know that
+$[[V tau1 v1[sigma] j]]$ and $[[V tau2 v2[sigma] j]]$. By downward closure, we also
+get $[[V tau1 v1[sigma] i]]$ and $[[V tau2 v2[sigma] i]]$ since $i < j$. Thus, we are done.
+\end{proof}
+
 \begin{lemma}[\link{homework/rocq/hw3/steps.v}{}{ST\_rec\_prod}]
 If $[[G, x:tau1 * tau2 |=k v : tau1 * tau2]]$ then $[[G |=k rec x.v : tau1 * tau2 ]]$.
 \end{lemma}
 
+\begin{proof}
+Let $j < k$ and $[[G sigma j]]$. We will use strong induction on $j$. We want
+to show that $[[V tau1 * tau2 (rec x. v )[sigma] j]]$. This is equivalent to
+$[[V tau1 * tau2 rec x.v[sigma] j]]$. By definition, this is equivalent to showing
+$ [[ |>j V tau1 * tau2 (v[sigma]) [rec x.(v[sigma])/x] ]]$. We can also rewrite this as
+$[[ |>j V tau1 * tau2 v[sigma, rec x. (v[sigma])/x] ]]$. The case where $j=0$ is trivial so
+let $j = S i$. By downward closure on $[[G sigma j]]$, we have that $[[G sigma i]]$. 
+By IH, this gives us $[[V tau1 * tau2 rec x.v[sigma] i]]$. By definition, this means that we have
+$[[G, x: tau1 * tau2 sigma, rec x.(v[sigma]) /x i]]$. So by definition of $[[G, x : tau1 * tau2 |=k v : tau1 * tau2]]$,
+we get that $[[V tau1 * tau2 v[sigma, rec x .(v[sigma]) /x ] i]]$. This is exactly what we wanted to show, so we're done.
+\end{proof}
+
 \begin{lemma}[\link{homework/rocq/hw3/steps.v}{}{ST\_prj1}]
 If $[[G |= k v1 : tau1 * tau2 ]]$ then $[[G |=k prj1 v1 : tau1 ]]$.
 \end{lemma}
+
+\begin{proof}
+Let $j < k$ and $[[G sigma j]]$. We will use
+strong induction on $j$. We want to show that $[[C tau1 (prj1 v1)[sigma] j]]$.
+Note that this is equivalent to showing $[[C tau1 prj1 (v1 [sigma]) j]]$. By definition,
+this means that if $[[prj1 (v1 [sigma]) ]]$ is irreducible, we want to show that there
+exists $v$ such that $[[ret v]] = [[prj1 (v1 [sigma])]]$ and $[[V tau1 v j]]$ and 
+if $[[prj1 (v1 [sigma]) ~> e']]$, then we want to show that $[[|> j C tau1 e']]$.
+
+By assumption, we have that $[[V tau1 * tau2 v1[sigma] j ]]$. Since $[[v1[sigma] ]]$ is a value,
+we have that either $[[v1[sigma] ]] = [[(product valuev1', v2')]]$ or $[[v1[sigma] ]] = [[rec x.v]]$. 
+
+Consider the case when $[[v1[sigma] ]] = [[(v1', v2')]]$. We know that $[[V tau1 * tau2 (v1', v2') j]]$.
+So by definition, we have that $[[|> j V tau1 v1']]$. We also have that $[[prj1 (v1 [sigma])]] = [[prj1 (v1', v2') ~> ret v1' ]]$. 
+Since it evaluates, by the definition of the $\mathcal{C}$, we want to show that $[[|> j  C tau1 ret v1']]$. The case when
+$j=0$ is trivial as usual. Let $j = S i$ and we want to show that $[[C tau1 ret v1' i]]$. Since we know that $[[ret v1']]$ is
+irreducible, we want to show that $[[V tau1 v i]]$. But we know by assumption that $[[|> j V tau1 v1']]$. So by definition of $\triangleright_j$, we 
+are done.
+
+Consider the case when $[[v1[sigma] ]] = [[rec x. v]]$.  From $[[V tau1 * tau2 rec x .v j]]$, by definition, we know that $[[|> j V tau1 * tau2 v[rec x. v/x] ]]$.
+We also know that $[[prj1 (rec x.v ) ~> prj1 v[rec x. v/x] ]]$ by \rref{s-prj1}. So, we want to show that $[[|> j C tau1 prj1 v[rec x. v/x] ]]$.
+Since $j=0$ case is trivial, consider the case where $j = S i$. We want to show that $[[C tau1 prj1 v[rec x. v/x] i]]$. But since $ j = S i$, by
+induction, we have that $[[C tau1 prj1 v[rec x. v/x] i]]$. So, we are done.
+\end{proof}
+
 
 If you would like an extra challenge, you can also prove the semantic soundness
 lemma for let expressions.
@@ -239,7 +397,7 @@ lemma for let expressions.
 \begin{lemma}[\link{homework/rocq/hw3/steps.v}{}{ST\_let}]
 If $[[G |= e1 : tau1 ]]$ and $[[G , x : tau1 |= e2 : tau2]]$ then
 $[[G |= let x = e1 in e2 : tau2 ]]$.
-\end{lemma}
-
+\end{lemma} 
 
 \end{document}
+administrative

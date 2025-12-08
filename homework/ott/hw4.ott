@@ -17,7 +17,7 @@ defns
 JINEffTyping :: '' ::= 
 
 defn 
-G |-> e : tau @ eff  ::  :: typing_out_tm :: 'to_'
+G |-> e : tau @ eff  ::  :: typing_otut_tm :: 'to_'
 {{ tex [[G]] \vdash_{OUT} [[e]] \stackrel{[[eff]]}{\in} [[tau]] }}
 by
 
@@ -31,25 +31,30 @@ G, x : tau1 |-> e2 : tau @ eff2
 ------------------------------------------------ :: let
 G |-> let x = e1 in e2 : tau @ eff1 + eff2 
 
-FILL_IN
+G |-> v1 : tau1 -> eff tau2 
+G |->  v2 : tau1 
 ------------------------- :: app
 G |-> v1 v2 : tau2 @ eff
 
-FILL_IN
+G |-> v : Nat 
+G |-> e1 : tau @ eff1
+G, x : Nat |-> e2: tau @ eff2
 --------------------------------------------------- :: ifz
-G |-> case v of { 0 => e1 ; S x => e2 } : tau @ eff 
+G |-> case v of { 0 => e1 ; S x => e2 } : tau @ eff1 lub eff2
 
-FILL_IN
+G |-> v : tau1 * eff tau2 
 --------------------------- :: prj1
 G |-> prj1 v : tau1 @ eff
 
-FILL_IN
+G |-> v : tau1 * eff tau2 
 --------------------------- :: prj2
-G |-> prj1 v : tau1 @ eff
+G |-> prj2 v : tau2 @ eff
 
-FILL_IN
+G |-> v : tau1 + tau2
+G, x : tau1 |-> e1 : tau @ eff1
+G, x : tau2 |-> e2 : tau @ eff2
 -------------------------------------------------------------- :: case
-G |-> case v of { inj1 x1 => e1 ; inj2 x2 => e2 } : tau @ eff
+G |-> case v of { inj1 x1 => e1 ; inj2 x2 => e2 } : tau @ eff1 lub eff2
 
 
 G |-> v : mu alpha . tau 
@@ -79,8 +84,8 @@ G |-> S v : Nat
 
 G |-> v1 : tau1
 G |-> v2 : tau2 
------------------------------------- :: pair
-G |-> ( v1 , v2 ) :  tau1 * eff tau2 
+------------------------- :: pair
+G |-> ( v1 , v2 ) :  tau1 * bot tau2 
 
 
 G |-> v1 : tau1
@@ -91,7 +96,7 @@ G |-> v2 : tau2
 --------------------------------- :: inj2
 G |-> inj2 v2 : tau1 + tau2
 
-FILL_IN
+G, x : tau1 |-> e : tau2 @eff
 -------------------------------- :: abs
 G |-> \x.e : tau1 -> eff tau2
 
@@ -122,37 +127,37 @@ by
 
 G |-/ v : tau 
 ------------------------ :: ret
-G |-/ ret v : tau @ bot
+G |-/ ret v : tau @ 0
 
 G |-/ e1 : tau1 @ eff1
 G, x : tau1 |-/ e2 : tau @ eff2 
 -------------------------------------- :: let
-G |-/ let x = e1 in e2 : tau @ eff1 + eff2
+G |-/ let x = e1 in e2 : tau @ (eff1 + eff2) + 1
 
 G |-/ v1 : tau1 -> eff tau2  
 G |-/ v2 : tau1 
 --------------------- :: app
-G |-/ v1 v2 : tau2 @ eff
+G |-/ v1 v2 : tau2 @ eff + 1
 
 G |-/ v : tau1 * eff tau2
 ------------------------- :: prj1
-G |-/ prj1 v : tau1 @ eff
+G |-/ prj1 v : tau1 @ eff + 1
 
 G |-/ v : tau1 * eff tau2
 ------------------------- :: prj2
-G |-/ prj2 v : tau2 @ eff
+G |-/ prj2 v : tau2 @ eff + 1
 
 G |-/ v : tau1 + tau2
 G , x1 : tau1 |-/ e1 : tau @ eff
 G , x2 : tau2 |-/ e2 : tau @ eff
 ----------------------------------------------- :: case
-G |-/ case v of { inj1 x1 => e1 ; inj2 x2 => e2 } : tau @ eff
+G |-/ case v of { inj1 x1 => e1 ; inj2 x2 => e2 } : tau @ eff + 1
 
 G |-/ v : Nat
 G |-/ e1 : tau @ eff
 G , x2 : Nat |-/ e2 : tau @ eff
 ----------------------------------------------- :: ifz
-G |-/ case v of { 0 => e1 ; S x2 => e2 } : tau @ eff
+G |-/ case v of { 0 => e1 ; S x2 => e2 } : tau @ eff + 1
 
 G |-/ v : mu alpha . tau  
 ------------------------------------- :: unfold
@@ -161,7 +166,7 @@ G |-/ unfold v : tau [mu alpha.tau/alpha] @ top
 G |-/ e : tau @ eff1    
 eff1 <: eff2 
 -------------------------------------- :: sub_eff
-G |-/ e : tau @ eff2
+G |-/ e : tau @ eff2 
 
 
 defn 

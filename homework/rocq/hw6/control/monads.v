@@ -11,12 +11,14 @@ Definition dapp {A} : dlist A -> dlist A -> dlist A := fun f g => fun x => (f (g
 Definition list_of_dlist {A} : dlist A -> list A := fun dl => dl [].
 
 Lemma dlist_left_id {A} {dl : dlist A} : dapp dnil dl = dl.
-(* FILL IN HERE *) Admitted.             
+  unfold dnil. unfold dapp. reflexivity.
+Qed.          
 Lemma dlist_right_id {A} {dl : dlist A} : dapp dl dnil = dl.
-(* FILL IN HERE *) Admitted.
+   eauto.
+Qed.
 Lemma dlist_assoc {A}{dl1 dl2 dl3 : dlist A} : 
   dapp (dapp dl1 dl2) dl3 = dapp dl1 (dapp dl2 dl3).
-Proof. (* FILL IN HERE *) Admitted.
+Proof. eauto. Qed.
 
 Fixpoint reverse_dlist {A} (xs : list A) : dlist A := 
   match xs with 
@@ -24,8 +26,27 @@ Fixpoint reverse_dlist {A} (xs : list A) : dlist A :=
   | y :: ys => dapp (reverse_dlist ys) (dcons y dnil)
   end.
 
+Lemma reverse_dlist_app {A} (xs k : list A) :
+  reverse_dlist xs k = rev xs ++ k.
+Proof. 
+  generalize dependent k. induction xs. 
+  - eauto.
+  - intros. simpl. rewrite <- app_assoc.
+    rewrite <- IHxs. eauto.
+Qed.
+
 Lemma reverse_dlist_spec {A} (xs : list A) : List.rev xs = list_of_dlist (reverse_dlist xs).
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  induction xs.
+  - eauto.
+  - simpl. rewrite IHxs.
+    unfold list_of_dlist.
+    rewrite reverse_dlist_app.
+    unfold dapp.
+    rewrite reverse_dlist_app.
+    rewrite app_nil_r.
+    eauto.
+Qed. 
 
 
 (** * Continuation Monad *)
@@ -38,7 +59,7 @@ Definition bind {K A B} : M K A -> (A -> M K B) -> M K B :=
 Infix ">>=" := bind (at level 70).
 Notation "x <- m1 ;; m2" := (bind m1 (fun x => m2)) (at level 70).
 
-(*
+(* 
 Left identity: return a >>= h ≡ h a
 Right identity:	m >>= return ≡ m
 Assoc: (m >>= g) >>= h ≡ m >>= (\x -> g x >>= h) 
@@ -46,14 +67,25 @@ Assoc: (m >>= g) >>= h ≡ m >>= (\x -> g x >>= h)
 
 Lemma M_left_id {K A B}{x:A}{h : A -> M K B} : ret x >>= h = h x.
 Proof.
-(* FILL IN HERE *) Admitted.
+  extensionality k.
+  unfold bind, ret.
+  reflexivity.
+Qed.
 
 Lemma M_right_id {K A}{x:A}{m : M K A} : m >>= ret = m.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  extensionality k.
+  unfold bind, ret.
+  reflexivity.
+Qed.
 
 Lemma M_assoc {K A B C}{m : M K A}{g : A -> M K B}{h : B -> M K C}  : 
   ((m >>= g) >>= h) = (m >>= (fun (x : A) => g x >>= h)).
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  extensionality k.
+  unfold bind, ret.
+  reflexivity.
+Qed.
 
 Fixpoint reverse_cps {K A} (xs : list A) : M K (list A) := 
   match xs with 
@@ -61,7 +93,19 @@ Fixpoint reverse_cps {K A} (xs : list A) : M K (list A) :=
   | y :: ys => zs <- reverse_cps ys ;; ret (zs ++ [y])
   end.
 
+Lemma reverse_cps_spec_gen {K A} (xs : list A) :
+  forall k : list A -> K, reverse_cps xs k = k (rev xs).
+Proof.
+  induction xs as [|y ys IH]; intros k; simpl.
+  - reflexivity.
+  - unfold bind, ret; simpl.
+    rewrite (IH (fun zs => k (zs ++ [y]))).
+    reflexivity.
+Qed.
 
 Lemma reverse_cps_spec {A} (xs: list A) : rev xs = reverse_cps xs (fun x => x).
 Proof.  
-(* FILL IN HERE *) Admitted.
+  symmetry.
+  rewrite reverse_cps_spec_gen.
+  reflexivity.
+Qed.

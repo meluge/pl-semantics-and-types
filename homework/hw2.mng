@@ -72,6 +72,191 @@ values, extending the proof from Chapter 3.
 For closed expressions $e$, we have $[[e ~>* v]]$ if and only if $[[e => v]]$.
 \end{theorem}
 
+
+For the forward direction, we first prove lemma 3.1.1 (step expansion) again.
+
+\begin{lemma}[Step expansion]
+If $[[e ~> e']]$, then for all $[[v]]$, if $[[e' => v]]$, then $[[e => v]]$.
+\end{lemma}
+\begin{proof}
+We induct on the small-step derivation $[[e ~> e']]$. Consider the following new cases:
+\begin{itemize}
+\item If the last rule used was \rref{s-let-cong}, we must have 
+  $[[let x = e1 in e2 ~> let x = e1' in e2]]$ with the assumption $[[e1 ~> e1']]$ (1).
+  Assume $[[let x = e1' in e2 => v]]$ for some $[[v]]$. To evaluate a let expression
+  to a value, it must have been \rref{bs-let}. By inversion on \rref{bs-let}, we 
+  get that $[[e1' => v1]]$ (2) and $[[e2 [v1/x] => v]]$. By IH on (1) and (2), we get that
+  $[[e1 => v1]]$. So, by \rref{bs-let}, we get that $[[let x = e1 in e2 => v]]$. 
+
+\item If the last rule used was \rref{s-letv}, we must have 
+  $[[let x = v1 in e2 ~> e2 [v1/x] ]]$. Assume $[[e2 [v1/x] => v2]]$. By \rref{bs-val}, we 
+  also have $[[v1 => v1 ]]$. So, using \rref{bs-let}, we immediately get
+  $[[let x = v1 in e2  => v2]]$ 
+
+\item If the last rule used was \rref{s-succ-cong}, we must have $[[succ e ~> succ e']]$
+  with $[[e ~> e']]$. Assume $[[succ e' => v]]$ for some v. We must have used \rref{bs-succ},
+  so by inversion, we have that $[[e' => k]]$ and $[[v]] = [[S k]]$. So by IH, we have 
+  $[[e => k]]$. And by \rref{bs-succ}, we get that $[[succ e => S k]]$. 
+
+\item If the last rule used was \rref{s-succ-lit}, we must have that $[[succ k ~> S k]]$. 
+  Assume $[[S k => v]]$ for some $[[v]]$. Since $[[S k]]$ is already a value, we know the
+  rule used must have been \rref{bs-val} and $[[v]] = [[S k]]$. We also know $[[k => k]]$ by
+  \rref{bs-val}. Then, by \rref{bs-succ}, we get that $[[succ k => S k]]$.
+
+\item If the last rule used was \rref{s-nrec-zero}, we must have 
+  $[[nrec 0 of {0 => e1 ; S x => e2} ~> e1]]$. Assume $[[e1 => v]]$ for some $[[v]]$.
+  By \rref{bs-val}, we have $[[0 => 0]]$. So by \rref{bs-nrec-zero}, we get that
+  $[[nrec 0 of {0 => e1 ; S x => e2} => v]]$. 
+
+\item If the last rule used was \rref{s-nrec-cong}, we must have
+$[[nrec e of {0 => e1 ; S x => e2} ~> nrec e' of {0 => e1 ; S x => e2} ]]$ with $[[e ~> e']]$.
+Assume $[[nrec e' of {0 => e1 ; S x => e2}  => v]]$ for some $[[v]]$. The last rule used 
+must have been either \rref{bs-nrec-zero} or \rref{bs-nrec-succ}. In the first case, we have
+$[[e' => 0]]$ and $[[e1 => v]]$. Since $[[e ~> e']]$, by IH, we know that $[[e => 0]]$. So
+we can use \rref{bs-nrec-zero} to get $[[nrec e of {0 => e1 ; S x => e2} => v]]$. Similarly,
+in the second case, we must have $[[e' => S k ]]$,  $[[e2[k/x] => \y.e2'' ]]$, 
+$[[nrec k of {0 => e1; S x => e2} => v1]]$, $[[e'' [v1/y] => v]]$. By IH, we get $[[e => S k]]$
+from $[[e ~> e']]$ and $[[e' => S k]]$. So by \rref{bs-nrec-succ}, we have
+ $[[nrec e of {0 => e1 ; S x => e2} => v]]$. 
+
+\item If the last rule used was \rref{s-nrec-succ}, we must have
+  $[[nrec (S k) of {0 => e1 ; S x => e2} ~> (e2 [k/x]) (nrec k of {0 => e1 ; S x => e2})]]$ 
+  Assume $[[(e2 [k/x]) (nrec k of {0 => e1 ; S x => e2}) => v]]$ for some $[[v]]$. We know the
+  rule used must have been \rref{bs-app}, so by inversion, we have $[[(e2 [k/x])  => \x. e1']]$,
+  $[[(nrec k of {0 => e1 ; S x => e2}) => v1]]$, and $[[e1'[v1 / x] => v]]$. 
+  We also have $[[S k => S k]]$ by \rref{bs-val}. By \rref{bs-nrec-succ}, we have 
+  $[[nrec (S k) of {0 => e1 ; S x => e2}  => v]]$. 
+
+\end{itemize}
+\end{proof}
+
+With Step Expansion, we can prove the main theorem.
+
+\begin{theorem}[Equivalence, forward direction]
+If $[[e ~>* v]]$, then $[[e => v]]$.
+\end{theorem}
+\begin{proof}
+We proceed by induction on the derivation $[[e ~>* v]]$. Consider the two cases:
+
+\begin{itemize}
+\item For the reflexive case, we have $[[e]] = [[v]]$. By \rref{bs-val}, we immediately have
+  $[[v => v]]$. 
+\item For the transitive case, we have $[[e ~> e1]]$ and $[[e1 ~>* v]]$. 
+  By IH, we have $[[e1 => v]]$. And by Step Expansion, we have $[[e => v]]$.
+\end{itemize}
+\end{proof}
+
+
+We now prove the other direction: if $[[e => v]]$, then $[[e ~>* v]]$.
+
+Lemma 3.1.1 to 3.1.5 remain identical. However, we also need multi-step
+analogue lemmas for new forms. We first have the easy congruence rules.
+
+\begin{lemma}[ms-let-cong]
+If $[[e1 ~>* e1']]$, then $[[let x = e1 in e2 ~>* let x = e1' in e2]]$.
+\end{lemma}
+
+\begin{proof}
+We induct on $[[e1 ~>* e1']]$. Consider the following cases: if the last rule
+used was reflexivity, then we have have $[[let x = e1 in e2 ~>* let x = e1 in e2]]$ by
+reflexivity. If the last rule used transitivity, then we have $[[e1 ~> e1'']]$ and $[[e1'' ~>* e1']]$.
+By \rref{s-let-cong}, we have $[[let x = e1 in e2  ~>* let x = e1'' in e2 ]]$.
+By IH, we have that $[[let x = e1'' in e2 ~>* let x = e1' in e2]]$.  By transitivity rule,
+we have $[[let x = e1 in e2 ~>* let x = e1' in e2]]$.
+\end{proof}
+
+\begin{lemma}[ms-succ-cong]
+If $[[e ~>* e']]$, then $[[ succ e ~>* succ e']]$.
+\end{lemma}
+\begin{proof}
+We induct on $[[e ~>* e']]$. If the last rule used was reflexivity, we're done immediately.
+Otherwise, we have $[[e ~> e'']]$ and $[[e'' ~>* e']]$. We use \rref{s-succ-cong} to get
+$[[succ e ~>* succ e'']]$. IH and transitivity similarly gives $[[succ e ~>* succ e']]$.
+\end{proof}
+
+\begin{lemma}[ms-nrec-cong]
+If $[[e ~>* e']]$, then $[[nrec e of {0 => e0; S x => e1 } ~>* nrec e' of {0 => e0 ; S x => e1} ]]$.
+\end{lemma}
+\begin{proof}
+We again induct on $[[e ~>* e']]$. Reflexivity is again immediate. And for transivitiy,
+we use \rref{s-nrec-cong} with $[[e ~> e'']]$. IH on $[[e'' ~>* e']]$ and transitivity gives us
+$[[ nrec e of {0 => e0; S x => e1 } ~>* nrec e' of {0 => e0 ; S x => e1} ]]$. 
+\end{proof}
+
+\begin{lemma}[ms-let]
+If $[[e1 ~>* v1]]$ and $[[e2[v1/x] ~>* v2 ]]$, then
+$[[let x = e1 in e2 ~>* v2]]$. 
+\end{lemma}
+
+\begin{proof}
+We know by \rref{ms-let-cong} that $[[let x = e1 in e2 
+~>* let x = v in e2 ]]$. Then, we can use \rref{s-letv} to 
+evaluate $[[let x = v in e2 ~> e2[v/x] ]]$. And now by the hypothesis,
+we know $[[ e2[v/x] ~>* v2]]$. By transitivity of the multi-step relation (which was proven in lecture), 
+we have $[[let x = e1 in e2 ~>* v2]]$.
+\end{proof}
+
+\begin{lemma}{ms-succ}
+If $[[e ~>* k]]$, then $[[succ e ~>* S k]]$. 
+\end{lemma}
+\begin{proof}
+We know by \rref{ms-succ-cong} that $[[succ e ~>* succ k]]$. Now by
+\rref{s-succ-lit}, we have $[succ k ~> S k]$. Again by transitivity,
+we have $[[succ e ~>* S k]]$. 
+\end{proof}
+
+\begin{lemma}{ms-nrec-zero}
+If $[[e ~>* 0]]$ and $[[e_0 ~>* v]]$, then $[[nrec e of {0 => e0; S x => e1 } ~>* v]]$.
+\end{lemma}
+\begin{proof}
+We know by \rref{ms-nrec-cong} that $[[nrec e of {0 => e0; S x => e1 } ~>* nrec 0 of  {0 => e0; S x => e1 }]]$
+By \rref{s-nrec-zero}, we have $[[nrec 0 of  {0 => e0; S x => e1 } ~> e0]]$. And by hypothesis,
+we know $[[e_0 ~>* v]]$. So by transitivity, we have $[[nrec e of {0 => e0; S x => e1 } ~>* v]]$.
+\end{proof}
+
+\begin{lemma}{ms-nrec-succ}
+If $[[e ~>* S k]]$, $[[e1[k/x] ~>* \y.e']]$, 
+$[[nrec k of {0 => e0; S x => e1 } ~>* v1]]$, $[[e1'[v1/y] ~>* v]]$,
+then $[[nrec e of {0 => e0 ; S x => e1} ~>* v]]$.
+\end{lemma}
+\begin{proof}
+We know by \rref{ms-nrec-cong} that $[[nrec e of {0 => e0; S x => e1 } ~>* nrec S k of  {0 => e0; S x => e1 }]]$.
+By \rref{s-nrec-succ}, we have $[[ nrec S k of  {0 => e0; S x => e1 } ~> (e1[k/x]) nrec k of {0 => e0; S x => e1}]]$. 
+By assumption and \rref{ms-app-cong1}, we have that $[[(e1[k/x]) nrec k of {0 => e0; S x => e1} ~>* (\y.e')  nrec k of {0 => e0; S x => e1}]]$.
+By assumption and \rref{ms-app-cong2}, we have $[[(\y.e')  nrec k of {0 => e0; S x => e1} ~>* (\y.e')v1]]$.
+By \rref{s-beta}, we have $[[ (\y.e')v1 ~> e1'[v1/y] ]]$. By assumption, we have $[[e1'[v1/y] ~>* v]]$. By transitivity,
+we have $[[nrec e of {0 => e0 ; S x => e1} ~>* v]]$.
+\end{proof}
+
+With the above lemmas, we can now prove the backwards direction:
+
+\begin{theorem}[Equivalence, backwards]
+If $[[e => v]]$, then $[[e ~>* v]]$. 
+\end{theorem}
+
+\begin{proof}
+We induct on the big-step evaluation. Consider the following new cases:
+\begin{itemize}
+\item If the last rule used was \rref{bs-let}, we have 
+  we have $[[e1 => v1]]$ and $[[e2[v1/x] => v2]]$. By IH, we know that
+  $[[e1 ~>* v1]]$ and $[[e2[v1/x] ~>* v2]]$. By the \rref{ms-let} lemma, 
+  we have that $[[let x = e1 in e2 ~>* v2]]$.
+
+\item If the last rule used was \rref{bs-succ}, we have 
+$[[e => k]]$. By IH, we know $[[e ~>* k]]$. By the \rref{ms-succ} lemma,
+we have that $[[succ e ~>* S k]]$.
+
+\item If the last rule used was \rref{bs-nrec-zero}, by IH on
+the hypothesis, we get $[[e ~>* 0]]$ and $[[e0 ~>* v]]$. By \rref{ms-nrec-zero},
+we have $[[nrec e of {0 => e0 ; S x => e1} ~>* v]]$.
+
+\item If the last rule was \rref{bs-nrec-succ}, we again use IH
+on the hypothesis and use \rref{ms-nrec-succ} to get the result we want.
+\end{itemize}
+\end{proof}
+
+
+
 \item
 Extend the semantic soundness proof from Chapter 4.
 This means that you need to prove semantic typing rules equivalent 
@@ -82,14 +267,63 @@ If $[[G |= e1 : tau1]]$ and $[[G , x : tau1 |= e2 : tau2]]$
 then $[[ G |= let x = e1 in e2 : tau2 ]]$.
 \end{lemma}
 
+\begin{proof}
+Let $[[sigma elem [G] ]]$ be an arbitrary substitution. 
+By definition, we get from $[[G |= e1 : tau1]]$ that
+$[[e1[sigma] elem C tau ]]$. And by definition of $[[ C tau ]]$, we have that
+$[[ e1[sigma] => v1 ]]$ where $[[v1 elem V tau1]]$. 
+Now, extend $[[sigma]] $ by $x \mapsto v_1$. Since we know that 
+$[[v1 elem V tau1]]$, we also know $[[v1/x , sigma elem [G, x: tau1] ]]$.
+Combining $[[v1 elem V tau1 ]]$ with $[[G , x : tau2 |= e2 : tau2]]$, we have that
+$[[e2[v1/x , sigma] =>v2 ]]$. By \rref{bs-val}, we know that
+$[[v1 => v1]]$. So by \rref{bs-let}, we have that 
+$[[let x = e1[sigma] in e2[sigma] => v2]]$. So by definition, we 
+have that $[[ let x = e1[sigma] in e2[sigma] elem C tau2 ]]$. 
+\end{proof}
+
 \begin{lemma}[Semantic succ] 
 If $[[G |= e : Nat]]$ then $[[G |= succ e : Nat]]$
 \end{lemma}
+
+\begin{proof}
+Let $[[sigma elem [G] ]]$ be an arbitrary substitution. By definition,
+we get that know that $[[e [sigma] elem C Nat ]]$. So, we know that
+there exists $v$ such that $[[e[sigma] => v]]$ and $[[v elem C Nat ]]$.
+So by definition, we have that $[[k elem nats]]$. By \rref{bs-succ},
+we have that $[[succ (e[sigma]) => S k]]$. Since $[[S k elem V Nat]]$, 
+we have that $[[succ (e [ sigma]) elem C Nat]]$.
+\end{proof}
 
 \begin{lemma}[Semantic nrec] 
 If $[[G |= e : Nat]]$ and $[[G |= e0 : tau]]$ and $[[G, x : Nat |= e1 : tau -> tau]]$, 
 then $[[ G |= nrec e of { 0 => e0 ; S x => e1 } : tau ]]$.
 \end{lemma}
+
+\begin{proof}
+Let $[[sigma elem [G] ]]$ be an arbitrary substitution. Similar 
+to the previous case, we get that there exists $[[k elem nats]]$ such that
+$[[e => k]]$. By definition of semantic type-checking, we need to show that
+$[[nrec k of {0 => e0 [sigma] ; S x => e1 [sigma]} => v]]$ for some $[[v elem V tau]]$.
+We prove this by induction on $k$. 
+\begin{itemize}
+\item If $k=0$, we first know by assumption that $[[e0[sigma] => v]]$
+where $[[v elem V tau]]$. We also know by \rref{bs-val} that
+$[[0=> 0]]$. With the two hypothesis, by \rref{bs-nrec-zero}, that
+$[[nrec k of {0 => e0 [sigma] ; S x => e1 [sigma]} => v]]$ and
+we're done.
+
+\item Assume that IH holds for $k$ and we will show for $k+1$. 
+The IH gives us that  $[[nrec k of { 0 => e0 ; S x => e1 } => v1]]$ (1).
+By extending $[[sigma]]$ with $x \mapsto k$, we know from 
+$[[G, x : Nat |= e1 : tau -> tau]]$ that $[[e1[k/x, sigma] => v2]]$ (2)
+for some $[[v2 elem V tau -> tau ]]$. And we know by Canonical Forms that
+$[[v2]] = [[\y.e']]$. And since $[[\y.e' elem V tau -> tau]]$, we know
+there exists $[[v elem V tau]]$ such that we have $[[e'[v1/y] => v]]$ (3).
+Again, by \rref{bs-val}, we have $[[S k => S k]]$ (4). Combining 
+(1), (2), (3), and (4) with \rref{bs-nrec-succ}, we get
+$[[ nrec (S k) of {0 => e0[sigma] ; S x => e1[sigma] } => v ]]$.
+\end{itemize}
+\end{proof}
 
 
 \end{enumerate}
@@ -114,7 +348,7 @@ $[[v]]$, or a special error result, written $[[Stuck]]$.
 
 \[ \mathit{result}\ [[r]]\ ::=\ [[Stuck]]\ |\ [[v]] \]
 
-Our rules for the big step semantics produce this result when we try to apply a
+Our rules for the big step semantics this result when we try to apply a
 non-function (\rref{ts-app-stuck}), or when one of the subterms of an
 application produces an error (\rref{ts-app1,ts-app2}). (You do not need to
 consider $\ottkw{let}$, $\ottkw{succ}$ or $\ottkw{nrec}$ terms in this
@@ -126,10 +360,69 @@ problem.)
 \end{definition}
 
 \begin{enumerate}
-\item Prove the following lemma:
-\begin{lemma}[Type Safety (Not stuck)]
-If $[[ |- e : tau ]]$ and $[[ e =s> r ]]$ then $[[r]]$ is not $[[Stuck]]$.
+\item 
+We first prove the equivalent of Preservation Lemma before Type Safety.
+
+\begin{lemma}{Preservation (Not stuck)}
+If $[[G |- e : tau]]$ and $[[e =s> v]]$, then $[[v : tau]]$.
 \end{lemma}
+\begin{proof}
+We induct on the evaluation relation $[[ e =s> v]]$. Note that
+since it evaluates to a value, the last rule used could not have been
+\rref{ts-app-stuck}, \rref{ts-app1}, or \rref{ts-app2}.
+
+Consider the case when the last rule used was \rref{ts-val}. This case
+is trivial since by assumption we know $[[G |- v : tau]]$, but
+this is also what we wanted to show.
+
+Consider the case when the last rule was \rref{ts-app}. 
+Let $[[ G |- e1 e2 : tau ]]$ and $[[e1 e2 =s> v]]$. We want to show
+that $[[v : tau]]$. By assumption, 
+we know that $[[e1 => \x.e1']]$, $[[e2 => v1]]$, and $[[e1'[v1/x]  =s> v]] $.
+By inversion on $[[G |- e1 e2 : tau]]$, we also knwo that 
+$[[ G |- e1 : tau1 -> tau]]$ and $[[G |- e2 : tau1 ]]$. 
+By IH, we know that $[[G |- \x.e1' : tau1 -> tau]]$ and
+$[[G |- v1 : tau1]]$. By inversion on $[[G |- \x.e1' : tau1 -> tau]]$,
+we know that $[[G, x: tau1 |- e1' : tau]]$. By substitution lemma,
+we have that $[[ G |- e1'[v1/x] : tau ]]$. Since we also know that
+ $[[e1'[v1/x]  =s> v]] $, by IH, we get that $[[ G |- v : tau]]$. So we're done.
+\end{proof}
+
+Prove the following lemma:
+\begin{lemma}[Type Safety (Not stuck)]
+If $[[ G |- e : tau ]]$ and $[[ e =s> r ]]$ then $[[r]]$ is not $[[Stuck]]$.
+\end{lemma}
+
+\begin{proof}
+We induct on the big step relation $[[ e =s> r ]]$. Consider all the evaluation rules:
+\begin{itemize}
+\item If the last rule used was \rref{ts-val}, then $r =v$. So since $r$ is a value, it is not stuck.
+
+\item If the last rule used was \rref{ts-app}, then we know that 
+$[[e1 => \x.e1' ]]$, $[[e2 => v1]]$, and $[[ e1'[v1/x] =s> r ]]$ (1). 
+By inversion on $[[G |- e1 e2 : tau]]$, we know that $[[G|- e1 : tau1 -> tau ]]$
+and $[[ G|- e2 : tau1]]$. By preservation, we know that $[[G|- \x.e1' : tau1 -> tau]]$.
+We can now invert on this again to get that $[[G, x:tau1 |- e1' : tau]]$. 
+Similarly, by preservation, we know that $[[ G |- v1: tau1]]$. So by substitution,
+we know that $[[ G |- e1'[v1/x] : tau]]$ (2). By IH on (1) and (2), we know that
+$r$ is not stuck. 
+
+\item If the last rule used was \rref{ts-app-stuck}, we want to check
+  that this case is impossible since $[[r]] = [[Stuck]]$. We know by assumption that $[[e1 => k]]$.
+  We also know by inversion on $[[G |- e1 e2 : tau]]$ that $[[G |- e1 : tau1 -> tau]]$
+  and $[[G |- e2 : tau1]]$. Now by preservation, we know that $[[ G |-  k : tau1 -> tau]]$
+  But we know by canonical forms that a value of type $[[tau1 -> tau]]$ must be a lambda 
+  and $k$ is a natural number. So this case is impossible.
+
+\item If the last rule used was \rref{ts-app1}, we again want to check
+that this case is impossible. We know by assumption that $[[e1 =s> Stuck ]]$ (1).
+We also know by inversion on $[[G |- e1 e2 : tau]]$ that $[[G |- e1 : tau1 -> tau]]$ (2)
+  and $[[G |- e2 : tau1]]$. So IH on (1) and (2) gives us a contradiction.
+
+\item If the last rule used was \rref{ts-app2}, we proceed the same as \rref{ts-app1}
+except that we use IH on the second premise that $[[e2 =s> Stuck]]$ and $[[G |- e2 : tau1]]$
+\end{itemize}
+\end{proof}
 \item How does this statement of the lemma compare to the preservation and progress lemmas 
 described in Chapter 1?
 
@@ -143,6 +436,25 @@ What sort of errors would this safety lemma catch? What would still be considere
 Furthermore, we discussed that there were some languages that we wanted to
 call type safe, but did not satisfy the small-step properties of preservation
 and progress. Would these languages satisfy this lemma?
+
+\begin{itemize}
+\item The main difference between preservation and progress lemmas and this
+type safety is that we have a guarded statement assuming that $e$ evaluates 
+to a result (so it's dependent on termination). 
+\item If we add $[[null]]$ from HW1, then this lemma would still consider
+the addition type safe. Consider the term $[[ null 0 ]]$. Looking at the 
+evaluation rules, we know that this cannot step. So the type safety lemma
+is vacuously satisfied in this case. Similarly, adding nth list would also
+keep the system type safe, as $[[ nil 0 ]]$ will be also vacuously satisfied.
+
+\item For the mystery language where we map natural numbers to types, if we 
+don't add an extra evaluation rule, this addition will break type safety
+since $[[e1 => k]]$ will lead to \rref{ts-app-stuck}.
+
+\item This type safety only guarantees safety when it terminates while the 
+small-step safety talks about all reachable states.
+
+\end{itemize}
 \end{enumerate}
 
 \newpage
@@ -180,10 +492,79 @@ With this definition, we can use this definition of type safety.
 If $[[|- e : tau]]$ then for all natural numbers $k$, $[[e =k> r]]$, i.e. $e$ is Safe for $k$.
 \end{theorem}
 
+
+
 \begin{enumerate}
-\item Prove this theorem by induction on $k$.
+
+
+\item 
+We first prove the equivalent of Preservation for this language.
+
+\begin{lemma}{Preservation (step-counting)}
+If $[[G |- e : tau]]$ and $[[e =k> v]]$, then $[[v : tau]]$.
+\end{lemma}
+\begin{proof}
+Note that \rref{tk-timeout}, \rref{tk-app1}, and \rref{tk-app2}
+cannot apply as we need the relation to step to a value. So
+we can also assume that $ k = S i$ for some $i$. 
+
+Identical to Preservation for Timeout, \rref{tk-val} is trivial
+since our assumption gives us $[[G |- v : tau]]$, which is also what we 
+want to prove.
+
+If the last rule used was \rref{tk-app}, the proof is also
+similar to Preservation for Timeout. We can use inversion
+on the typing relation to get that $[[G |- e1 : tau1 -> tau]]$ and
+$[[G |- e2 : tau1]]$. On the assumption $[[ e1 =i> \x.e1' ]]$
+and $[[e2 =i> v1]]$, we can use IH to get that 
+$[[ G |- \x.e1' : tau1 -> tau]]$ and $[[G |- v1 : tau1]]$. We
+again invert on the typing of the lambda and use substitution
+to get that $[[G |- e1'[v/x] : tau]]$. So by IH on $[[e1'[v/x] =i> v]]$,
+we get that $[[ G |- v : tau]]$. 
+\end{proof}
+
+
+
+We can now prove Type Safety by induction on $k$.
+
+\begin{proof}
+\begin{itemize}
+\item If $k=0$, then by \rref{tk-timeout}, we have $[[e =0> Timeout]]$. So we're done.
+
+\item Let type safety hold for $k$ and we want to show it for $S k$. We case
+  on the structure of $e$. 
+  \begin{itemize}
+    \item Since $e$ is a closed term, it cannot be a lambda.
+    \item If $e$ is a value, then by \rref{tk-val}, we have $[[ v =S k> v]]$.
+          So we're done.
+    \item If $e=e_1 e_2$ is an application, we can first invert on $[[|- e1 e2 : tau]]$ 
+        to get $[[|- e1 : tau1 -> tau ]]$ and $[[ |- e2 : tau1 ]]$. By IH, we have that
+        $[[e1 =k> r1]]$ (1) for some $r_1$. Either $r_1$ is a $[[Timeout]]$ or $[[v]]$.
+        In the first case, we're done \rref{tk-app1}. In the second case, we can
+        use preservation to get that $[[|- v : tau1 -> tau ]]$. Since $v$ is an arrow
+        type and is a value, we know that it's a lambda $[[v]] = [[\x.e1']]$. 
+        So we have that $[[e1 =k> r1]]$. Use IH on $[[ |- e2 : tau1 ]]$ to get that 
+        $[[e2 =k> r2]]$ (2). Similarly, if $[[r2]] = [[Timeout]]$, then we are done by
+        \rref{tk-app2}. If $[[r2]] = [[v1]]$, then we first invert on $[[|- \x.e1': tau1 -> tau]]$
+        to get that $[[x: tau1 |- e1' : tau2 ]]$. And by substitution, we have that
+        $[[|- e1'[v1/x] : tau]]$. Now use IH to get that $[[e1'[v1/x] =k> r ]]$ (3). Then we can use (1), (2), and (3) with \rref{tk-app}
+        to get that $[[e1 e2 =S k> r]]$.
+
+  \end{itemize}
+\end{itemize}
+\end{proof}
+
+
 \item Analyze this statement of type safety just as you did for the previous problem. Is it possible for a language to satisfy the step-counting theorem, but not the not-stuck theorem? Or vice versa?
 \end{enumerate}
 
+\begin{itemize}
+\item The previous example of $[[null 0]]$ will fail here since there is no 
+rule to evaluate $[[(null 0)]]$ for any $k$ (similar to small-step). So
+this type safety successfully catches this error while the non-stuck theorem does not
+catch this.
+\item Without removing a core big-step with timeout rule, I could not find a 
+modification so that the timeout holds while the not stuck theorem fails.
+\end{itemize}
 
 \end{document}

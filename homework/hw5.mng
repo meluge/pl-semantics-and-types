@@ -31,7 +31,7 @@
 \interfootnotelinepenalty=10000
 
 \title{CIS 7000-1 Homework 5}
-\author{NAME: FILL IN HERE}
+\author{NAME: One An}
 
 \inputott{all-rules}
 
@@ -58,16 +58,18 @@ to help you get started.
   axiom, i.e., should not include any premises in order for the rule to apply.
 
 \begin{definition}[\hwlink{stlc/stack.v}{frame}{Frame Grammar}]
-\[ [[frame]] ::= [[let x = _ in e]]\ |\ \textit{ADD new frames here} \ldots  \]
+\[ [[frame]] ::= [[let x = _ in e]]\ |\ [[succ _ ]]  |\ [[_ e]] |\ [[v _ ]] 
+   |\ [[nrec _ of {0 => e1; S x => e2}]]   \]
 \end{definition}
 
 \begin{definition}[\hwlink{stlc/stack.v}{Stack.step}{Stack-based small-step semantics}]\ \\
-\drules{$[[<s,e> |-> <s', e'>]]$}{Add rules here}{ssm-letv,ssm-push}
+\drules{$[[<s,e> |-> <s', e'>]]$}{Add rules here}{ssm-push,ssm-letv,ssm-succpush,ssm-succv,ssm-appOnepush,
+ssm-appTwopush,ssm-appv, ssm-nrecpush, ssm-nreczero, ssm-nrecsucc }
 \end{definition}
 
 \item As part of making sure that your definitions produce the same semantics
   as our original semantics for STLC, you should prove several lemmas. One
-  lemma, shown below, connects the big-step semantics to the stack based
+  lemma, shown below, connects the big-step semantics to the stack based  
   semantics.
   \begin{lemma}[\hwlink{stlc/stack.v}{bigstep_completeness}{Bigstep completeness}]
      $[[ e => v ]]$ implies $[[ <s, e> |->* <s, v> ]]$ for any $s$.
@@ -75,8 +77,26 @@ to help you get started.
   This proof proceeds by induction on the derivation of $[[e => v]]$. Typeset
   the case when the last rule used was \rref{bs-app}.
 
+
+
 \[ \drule{bs-app} \]
 
+
+\begin{proof}
+If the last rule used was \rref{bs-app}, then we know that $[[e1 e2 => v2]]$ and
+we want to show $[[ < s, e1 e2> |->* < s, v2 > ]]$ for an
+arbitrary $s$. By inversion, we know that
+$[[ e1 => \x. e1' ]]$, $[[e2 => v1]]$, and $[[e1'[v1/x] => v2]]$. By 
+\rref{ssm-appOnepush}, we know $[[ <s, e1 e2> |-> < _ e2 : s, e1> ]]$.
+By IH on $[[ e1 => \x.e1' ]]$, we have that $[[ < _ e2 : s, e1> |->* < _ e2 : s, \x.e1' >]]$.
+By \rref{ssm-appTwopush}, we have that $[[ < _ e2 : s, \x.e1'> |->  < \x.e1' _ : s, e2> ]]$. 
+By IH on $[[ e2 => v]]$, we have that $[[ < \x.e1' _ : s, e2 > |->* < \x.e1' _ : s, v1>  ]]$.
+By \rref{ssm-appv}, we have that $[[ < \x.e1' _ : s, v1 > |->* < s, e1'[v1/x] > ]]$.
+By IH on $[[ e1[v1/x] => v2 ]]$, we know that $[[ < s, e1[v1/x] > |->* <s, v2> ]]$.
+Chaining the reductions, we get that $[[ < s, e1 e2> |->* <s, v2> ]]$, which
+completes the proof.
+
+\end{proof}
 \newpage
 
 \item Complete the definition of the ``unravel function'', written $[[s{e}]]$
@@ -90,7 +110,10 @@ to help you get started.
     \begin{array}{lcl}
     [[ nil { e } ]] &=& [[e]] \\
     [[(let x = _ in e2 : s){e}]] &=& [[s { let x = e in e2 }]]\\
-    \textit{FILL IN HERE}
+    [[ (_ e2 : s){e}]] &=& [[s {e e2}]] \\ 
+    [[ (v1 _ : s){e}]] &=& [[s{ v1 e}]] \\
+    [[ (succ _ : s){e} ]] &=& [[s{succ e}]] \\ 
+    [[ (nrec _ of {0 => e1; S x => e2} : s){e}]] &=& [[ s{nrec e of {0 => e1; S x => e2}} ]]
     \end{array}
   \]
   \end{definition}
@@ -98,6 +121,55 @@ to help you get started.
   \begin{lemma}[\hwlink{stlc/stack.v}{stack_cong}{Stack congruence}]
     If $[[e ~> e']]$ then $[[s {e} ~> s{e'}]]$.
   \end{lemma}
+
+  \begin{proof}
+    We will show this by induction on the stack $[[s]]$. For the base 
+    case, let $[[s ]] = [[nil]]$. Then, by definition of the unravel function,
+    we have that $[[ nil {e} ]] = [[e]]$ and $[[ nil {e'} ]] = [[ e']]$. 
+    By assumption, we know that $[[e ~> e']]$, so we're done.
+
+    For the inductive case, assume that our hypothesis holds for
+    $[[s]]$ and we want to show it for $[[f : s]]$ where $[[f]]$ is 
+    a frame. We case on what the frame could be.
+
+    If $[[f]]$ is  $[[let x = _ in e2]]$, we know by definition that
+    $[[ (f : s) {e} ]] = [[ s {let x = e in e2} ]]$ 
+    and $[[ (f : s) {e'} ]] = [[ s {let x = e' in e2} ]]$.
+    Since $[[e ~> e']]$, by congruence for the original small step,
+    we know that $[[ let x = e in e2 ~> let x = e' in e2]]$. 
+    By IH, we get that $ [[ s {let x = e in e2}  ~> s{let x = e' in e2}]]$.
+
+    If $[[f]]$ is $[[_ e2]]$, we know by definition that 
+    $[[ (f : s) {e} ]] = [[s {e e2}]]$ and $[[ (f : s) {e'} ]] = [[s {e' e2}]]$,
+    Since $[[e ~> e']]$, by congruence for the original small step, 
+    we have that $[[ e e2 ~> e' e2 ]]$. By IH, we have that
+    $[[ s {e e2} ~> s {e' e2}]]$.
+
+    If $[[f]]$ is $[[v1 _]]$, we know by definition that
+    $[[ (f : s) {e} ]] = [[ s{ v1 e} ]]$ and $[[ (f : s) {e'} ]] = [[ s{ v1 e'} ]]$. 
+    Again by congruence for the original small step,
+    we know that $[[v1 e ~> v1 e' ]]$. By IH, we have that 
+    $[[ s{v1 e} ~> s{v1 e'}]]$. 
+
+    If $[[f]]$ is $[[ succ _ ]]$, we know by definition that
+    $[[ (f : s) {e} ]] = [[s {succ e}]]$ and $[[ (f : s) {e'}]] = [[s {succ e'} ]]$.
+    Again by congruence for the original small step,
+    we know that $[[ succ e ~> succ e' ]]$. By IH,
+    we have that $[[ s {succ e} ~> s {succ e'}]]$.
+
+    If $[[f]]$ is $[[ nrec _ of {0 => e1; S x => e2} ]]$, we know by 
+    definition that $[[ (f : s) {e} ]] = [[ s {nrec e of {0 => e1; S x => e2 } }]]$
+    and  $[[ (f : s) {e'}]] = [[s {nrec e' of {0 => e1; S x => e2 } } ]]$.
+    Again by congruence for the original small step,
+    we know that $[[nrec e of {0 => e1; S x => e2} ~> nrec e' of {0 => e1; S x => e2}]]$.
+    By IH, we have that $[[ s{nrec e of {0 => e1; S x => e2} } ~> 
+    s {nrec e' of {0 => e1; S x => e2}}]]$. 
+
+    In all cases, we have that $[[ ( f: s ) {e} ~> (f : s) {e'}]]$, so we're done.
+
+
+
+  \end{proof}
 
 \newpage
 
@@ -134,6 +206,37 @@ The $[[ ||- e' : tau ]]$.
 By induction on $[[ ||- e : tau ]]$. 
 \begin{itemize}
 \item If \rref{t-nth} was the last rule used, then \ldots.
+
+We know by assumption that $[[e]] = [[e1 e2]]$, $[[ ||- e1 : List tau]]$,
+$[[ ||- e2 : Nat]]$, and $[[||- e1 e2 : tau]]$. We also know that 
+$[[e1 e2 ~>> e']]$, which means the only possible reduction rule we
+could have used is \rref{s-beta}, \rref{s-app-rec}, \rref{s-app-zero},
+\rref{s-app-succ}, and \rref{s-app-nil}. However, by inversion on 
+$[[||- e1 : List tau]]$, we know \rref{s-beta} and \rref{s-app-rec} is impossible
+since lambdas and recursive values cannot have a list type. So,
+we check the remaining three cases.
+
+If the rule used was \rref{s-app-zero}, then we know that 
+$[[e1 e2]] = [[(cons v1 v2) 0]]$ and $[[e']] = [[v1]]$.
+By inversion on $[[||- cons v1 v2 : List tau]]$,
+we know that $[[ ||- v1 : tau]]$, which is what we want to show.
+
+If the rule used was \rref{s-app-succ}, then we know that
+$[[e1 e2]] = [[(cons v1 v2) S k]]$ and $[[e']] = [[v2 k]]$.
+By inversion on $[[ ||- cons v1 v2 : List tau]]$, we know that
+$[[ ||- v2 : List tau]]$. By inversion on $[[ ||- S k : Nat]]$,
+we also know that $[[ ||- k : Nat]]$. By \rref{t-nth}, we get
+$[[ ||-  v2 k : tau ]]$, which is what we wanted to show.
+
+If the rule used was \rref{s-app-nil}, then we know that
+$[[e1 e2]] = [[nil v]]$ and $[[e' ]] = [[raise (exn 0)]]$. 
+By \rref{tv-exn}, we know that $[[ ||- exn 0 : Exn]]$.
+Then, by \rref{te-raise}, we have that $[[ ||- raise (exn 0) : tau']]$
+for any $[[tau']]$. We can pick $[[tau']] = [[tau]]$ and we're done.
+
+In all cases, we have that $[[||- e' : tau]]$, so we're done.
+
+(I assumed here that $[[raise 0]] = [[raise (exn 0)]]$.)
 \end{itemize}
 \end{proof}
 
@@ -160,6 +263,10 @@ For example, we have:
 What are the typing rules and operational semantics for $[[exit v]]$? You can add these rules to the Rocq development to 
 make sure that they do not violate type safety.
 
+\[ \drule{ssmte-exit} \]
+
+\[ \drule{ssmexit-exit} \]
+
 \vspace{0.5in}
 
 \item Effect handlers in OCaml also include a $\ottkw{discontinue}$ term. 
@@ -175,6 +282,8 @@ make sure that they do not violate type safety.
   Design a typing rule for this term and prove the corresponding cases of the preservation
   and progress lemmas.
 
+  \[ \drule{ssmte-discontinue} \]
+
 \begin{lemma}[\hwlink{control/control.v}{machine_preservation}{Machine Preservation}]
 If $[[ ||- m ok]]$ and  $[[m |-> m']]$. 
 The $[[ ||- m' ok ]]$.
@@ -183,6 +292,22 @@ The $[[ ||- m' ok ]]$.
 By inversion on the typing and step judgements.
 \begin{itemize}
 \item If the machine steps by \rref{ssm-discontinue}, then \ldots.
+
+In this case, we know that $[[m ]] = [[< s, discontinue (cont s') v >]]$ and
+$[[m']]= [[< s', raise v >]]$. We also know $[[ ||- m ok ]]$. By inversion,
+this means that there exists $[[tau1]], [[tau2]]$ such that
+$[[ ||- s : tau1 ~> tau2 ]]$ and $[[ ||- discontinue (cont s') v : tau1 ]]$.
+We know that the only typing rule that could have been used for the 
+second typing judgment is \rref{ssmte-discontinue}. So by inversion,
+this gives us that $[[ ||- cont s' : DeCont Exn tau1 ]]$ and $[[ ||- v : Exn]]$.
+The judgment $[[ ||- cont s' : DeCont Exn tau1 ]]$ must have used \rref{tv-decont}, 
+so by inversion, we
+know that $[[ ||- s' : Exn ~> tau1]]$.
+From $[[ ||- v : Exn]]$, we can also use \rref{te-raise} to conclude that 
+$[[ ||- raise v : Exn]]$ (since the type can be anything). So from
+$[[ ||- raise v : Exn]]$ and $[[ ||- s' : Exn ~> tau1]]$, we can
+use \rref{m-ok} to get that $[[ ||- <s' , raise v>  ok]]$, which is what
+we wanted to show. 
 \end{itemize}
 \end{proof}
 
@@ -192,7 +317,19 @@ If $[[ ||- m ok]]$ and there is no $[[m']]$ such that $[[m |-> m']]$, $[[m]]$ is
 \begin{proof}
 By induction on the typing judgement.
 \begin{itemize}
-\item If the last rule used was \rref{t-discontinue}, then \ldots.
+\item If the last rule used was \rref{ssmte-discontinue}, then \ldots.
+
+By assumption, we know that $[[m ]] = [[< s, discontinue v1 v2 > ]]$ where
+$[[ ||- s : tau1 ~> tau2 ]]$ and $[[ ||- discontinue v1 v2 : tau1 ]]$.
+By inversion on  \rref{ssmte-discontinue}, we know that 
+$[[ ||- v1 : DeCont Exn tau1 ]]$ and $[[v2 : Exn]]$. The only typing rule
+we could have used for $[[ ||- v1 : DeCont Exn tau1 ]]$  is \rref{tv-decont},
+so we know that $[[v1]] = [[cont s']]$ and $[[||- s' : Exn ~> tau1]]$. So
+this means that $[[m ]] = [[<s, discontinue (cont s') v2>]]$, which means
+\rref{ssm-discontinue} applies. So we know that $[[m']]$ exists such that
+$[[m |-> m']]$, which means this case is impossible.
+
+
 \end{itemize}
 \end{proof}
 
@@ -278,7 +415,52 @@ Your job for this problem is to:
 \item Define the typing judgements for frames, stacks, and machines. (You can
   start with the analogous definitions from the \control language and effect
   tracking.)
+
+\drules{$[[ ||- frame : tau1 ~> tau2]]$ }{}{tf-eff-let, tf-eff-try-exn}
+
+\drules{$[[ ||- s : tau]]$ }{}{ts-eff-nil, ts-eff-cons}
+
+\drules{$[[ ||- m ok  @ eff ]] $}{}{me-ok-eff}
 \item State and prove the preservation lemma for the $[[find_exn s k]]$ term.
+
+\begin{lemma}{Preservation for $[[find_exn s k]]$ }
+If $[[||-' s : tau]]$ and $[[||- exn k : Exn]]$,
+then there exists $[[eff]]$ such that $[[ ||- find_exn s k ok @ eff]]$.
+\end{lemma}
+
+\begin{proof}
+We induct on the stack $[[s]]$. For the base case, consider
+when $[[s]] = [[nil]]$. By definition, we have that 
+$[[ find_exn nil k ]] = [[<nil, raise (exn k) > ]]$. By
+\rref{ts-eff-nil}, we know that $[[||- nil : tau]]$
+for any $[[tau]]$. We also know by \rref{tee-raise-eff},
+$[[ ||- raise (exn k) : tau @ {k} ]]$. Then, picking any $[[tau]]$, 
+we get by \rref{me-ok-eff} that $[[ ||- <nil, raise (exn k)> ok @{k}]]$,
+which is what we wanted to check.
+
+
+For the inductive case, assume our lemma holds for $[[s]]$ and 
+we will show it for $[[f : s]]$ where $[[f]]$ is an arbitrary stack. First,
+consider the case when $[[f]] = [[try _ with exn k => e2]]$. 
+By definition, we know that $[[ find_exn f : s k ]] = [[<s, e2> ]]$. By inversion on 
+$[[ ||- f : s : tau]]$, we know that there exists $[[tau2]]$ such that 
+$[[ ||- try _ with exn k => e2  : tau ~> tau2 ]]$ and $[[ ||- s : tau2 ]]$. 
+And by inversion on $[[ ||- try _ with exn k => e2  : tau ~> tau2 ]]$ with the 
+only possible rule \rref{tf-eff-try-exn}, we know that $[[ ||- e2 : tau @ eff]]$ 
+for some $[[eff]]$ and
+$[[tau]] = [[tau2]]$. So since we had $[[ ||- s : tau2]]$, this is equivalent to
+$[[ ||- s : tau]]$. Picking $[[eff]]$ from  $[[ ||- e2 : tau @ eff]]$ ,
+by \rref{me-ok-eff}, we have that $[[ ||- <s, e2 >  ok @ eff]]$, which is what
+we wanted to show.
+
+Now consider the case when $[[f]] \neq [[try _ with exn k => e2]]$. 
+We know by definition that $[[ find_exn f : s k ]] = [[find_exn s k]]$.
+Inversion on $[[ ||- (f : s) : tau]]$, this gives us $[[ ||- s : tau2]]$
+and $[[ ||- f : tau ~> tau2]]$ for some $[[tau2]]$. So by IH, we have 
+that there exists $[[eff]]$ such that $[[ ||- find_exn s k ok @ eff]]$,
+which is what we wanted to show.
+
+\end{proof}
 \item (Optional) Prove the \hwlink{exn/exn.v}{machine_preservation}{preservation lemma}.
 \item (Optional) Prove the \hwlink{exn/exn.v}{machine_progress}{progress lemma}.
 \end{enumerate}

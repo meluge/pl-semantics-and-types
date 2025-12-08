@@ -9,7 +9,7 @@ eff :: '' ::=
 
 e :: 'e_' ::=
   | throw v e  ::  :: throw_e
-  | exit v     ::  :: abort                      
+  | exit v     ::  :: abort       
   | discontinue v1 v2 ::  :: discontinue
   | try e1 with exn k => e2 ::  :: try_k
 
@@ -42,7 +42,24 @@ G ||- e : tau'
 G ||- throw v e : tau
 
 
+defns 
+JStackSmallTyping :: '' ::= 
 
+defn 
+G ||- e : tau  ::  :: typing_ssm_tm :: 'ssmte_'
+{{ tex [[G]] \vdash [[e]] \in [[tau]] }}
+by
+
+
+G ||- v : tau
+---------------------------------------- :: exit
+G ||- exit v : tau
+
+
+G ||- v1 : DeCont Exn tau 
+G ||- v2 : Exn 
+------------------------------------------------- :: discontinue
+G ||- discontinue v1 v2 : tau
 
 defns 
 JStackSmall :: '' ::= 
@@ -52,13 +69,47 @@ m |-> m' ::  :: small_step :: 'ssm_'
 by
 
 
+
+
+
+---------------------------------------------- :: succpush
+< s, succ e > |-> < succ _ : s , e>
+
+
+---------------------------------------------- :: succv
+< succ _  : s, k > |-> < s, S k >
+
+
+-------------------------------------------------- :: app1push
+< s, e1 e2 > |->  < _ e2 : s , e1 >
+
+
+
+------------------------------------------------------- :: app2push
+< _ e2 : s , v1 > |-> < v1 _ : s,  e2 >
+
+
+------------------------------------------------------ :: appv
+< (\x. e1) _ : s, v2 > |-> < s, e1[v2/x] >
+
+
+---------------------------------------------------------------- :: nrecpush
+< s, nrec e of {0 => e1; S x => e2} > |-> <nrec _ of {0 => e1; S x => e2} : s, e >
+
+
+------------------------------------------------------- :: nreczero
+< nrec _ of {0 => e1; S x => e2} : s, 0> |-> <s, e1>
+
+
+----------------------------------------------------------- :: nrecsucc
+< nrec _ of {0 => e1; S x => e2} : s, S k > |-> < s, (e2[k/x])(nrec k of {0 => e1; S x => e2}) >
+
 ---------------------------------------------------------  :: throw_e
 < s , throw (cont s') e > |-> < s' , e >
 
 
 ---------------------------------------------------------  :: letv
 < let x = _ in e2 : s , v > |-> < s, e2 [ v/x] >
-
 
 ---------------------------------------------------------  :: discontinue
 <s, discontinue (cont s') v> |-> <s', raise v>
@@ -104,4 +155,53 @@ G ||- prj1 v : tau1 @ bot
 G ||- v : tau1 * tau2
 --------------------------------- :: prj2_bot
 G ||- prj2 v : tau2 @ bot
- 
+
+defn 
+||- frame : tau1 ~>' tau2 ::  :: typing_frame_eff :: 'tf_eff_' 
+{{ tex \vdash [[frame]] \in [[tau1]] [[~>']] [[tau2]] }}
+by
+
+, x : tau1 ||- e2 : tau2 @ eff
+------------------------------------ :: let
+||- let x = _ in e2 : tau1 ~>' tau2
+
+||- e2 : tau @ eff
+------------------------------------------ :: try_exn
+||- try_with exn k => e2 : tau ~>' tau
+
+defn 
+||-' s : tau ::  :: typing_stack_eff :: 'ts_eff_' 
+{{ tex \vdash [[s]] \in [[tau]] }}
+by
+
+--------------- :: nil
+||-' nil : tau
+
+||- frame : tau1 ~>' tau2
+||-' s : tau2
+----------------------- :: cons 
+||-' (frame : s) : tau1
+
+
+defn 
+||- m ok @ eff ::   :: machine_eff_ok :: 'me_' 
+by 
+
+||-' s : tau               
+||- e : tau @ eff          
+------------------------- :: ok_eff
+||- < s , e > ok @ eff
+
+
+defns 
+JStackSmallExit :: '' ::= 
+
+defn 
+m |-> m' ::  :: small_step_exit :: 'ssmexit_' 
+by
+
+
+----------------------------------------------------------- :: exit 
+< s, exit v > |-> < nil, ret v >
+
+
